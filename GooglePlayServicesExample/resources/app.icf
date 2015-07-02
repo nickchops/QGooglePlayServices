@@ -1,0 +1,11 @@
+[S3E]
+MemMgrMaxAllocWarning=0
+
+[GL]
+
+[QUICK]
+mainFilename="main.lua"
+
+# Do not start rendering until director:startRendering() is called. Prevents
+# the screen being cleared to black while Lua loads, if possible.
+DeferRenderingOnStart=1

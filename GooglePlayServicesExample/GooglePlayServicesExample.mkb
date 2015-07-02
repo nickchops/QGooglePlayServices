@@ -1,0 +1,74 @@
+#!/usr/bin/env mkb
+
+# Quick Project
+
+if {{ option use_prebuilt }}
+{
+    subproject "$MARMALADE_ROOT/quick/quick_prebuilt"
+}
+else
+{
+    subproject "$MARMALADE_ROOT/quick/quick"
+}
+
+options
+{
+    s3e-data-dir = resources
+    app-icf = 'resources/common.icf,resources/app.icf'
+    builddir = build_temp
+}
+
+files
+{
+    (resources)
+    app.icf
+    main.lua
+    config.lua
+}
+
+assets
+{
+    (resources)
+    .
+    
+    # Base asset set used by both optimisation options
+    [shared]
+    (resources)
+    
+    # These are engine code that's never pre-compiled,
+    # so must include source version
+    quicklua/dbg.lua
+    quicklua/openquick.lua
+    quicklua/QConfig.lua
+    
+    #edit this if you are using a custom file via [QUICK] configFileName=
+    config.lua
+
+    # Non-code assets go here. This assumes your assets are in these folders.
+    # Add to and edit this if you have ANY additional resources.
+    fonts
+    
+    # List any of your own files that use require() rather than dofile() here.
+    # Only dofile-included code gets precompiled.
+    # myRequiredFile.lua
+    
+    # Use this to deploy a build using precompiled but not concatenated Lua
+    [precompiledLua]
+    <include shared>
+    (resources-precompiled)
+    .
+    
+    # Use this to deploy a build using precompiled and concatenated Lua
+    [optimisedLua]
+    <include shared>
+    (resources-concatenated)
+    .
+}
+
+subproject s3eGooglePlayServices
+
+deployments
+{
+    # App ID for Facebook apps
+    android-extra-strings='(facebook_app_id,FACEBOOK_APP_ID)'
+}
