@@ -40,7 +40,9 @@ namespace googlePlayServices {
 		
         if (s3eGooglePlayServicesAvailable())
 		{
-			ret = s3eGooglePlayServicesInit();
+			if (s3eGooglePlayServicesInit() == S3E_RESULT_SUCCESS)
+                ret = true;
+            
 			s3eGooglePlayServicesRegister(S3E_GOOGLEPLAYSERVICES_SIGNIN_CALLBACK, SignedInCallback, NULL);
             //TODO: register for achievement callbacks
 		}
