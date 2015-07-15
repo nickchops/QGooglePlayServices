@@ -18,6 +18,11 @@ Notes:
   MarmaladeQuickXXX - less typing and easier to include as subprojects if
   folder and mkf have the same name :)
 
+NB: This currently requires you to mod the Quick engine as well.
+Copy the contents of engine_mods over the root Marmalade SDK (e.g.
+C:/Marmalade/7.8) This will be built into the engine when you run
+build_quick_prebuilt.bat (see "Setup..." below)
+
 
 Prerequisites
 -------------

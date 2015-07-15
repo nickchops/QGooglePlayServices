@@ -37,30 +37,52 @@ int32 AchievementsLoadedCallback(void* systemData, void* userData)
 {
     LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "achievementsLoaded");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
-    LUA_EVENT_SEND();
-    lua_pop(g_L, 1);
-
-    /*
+    
     s3eGooglePlayAchievements* achs = (s3eGooglePlayAchievements*)systemData;
-    s3eDebugTracePrintf(">>>>>>>>>>> AchievementsLoadedCallback, count = %d", achs->count);
-    AppendMessage("Achievements Loaded:");
+    
+    LUA_EVENT_SET_INTEGER("count", achs->count);
+    
+    LUA_EVENT_START_TABLE();
+    
     for (int t = 0; t < achs->count; t++)
     {
         s3eGooglePlayAchievement *ach = achs->achievements + t;
-        s3eDebugTracePrintf("-----------------------------------");
-        s3eDebugTracePrintf("\tid = %s", ach->id);
-        s3eDebugTracePrintf("\tname = %s", ach->name);
-        s3eDebugTracePrintf("\tdescription = %s", ach->description);
-        s3eDebugTracePrintf("\ttype = %d", ach->type);
-        s3eDebugTracePrintf("\tstatus = %d", ach->status);
-        s3eDebugTracePrintf("\tcurrentSteps = %d", ach->currentSteps);
-        s3eDebugTracePrintf("\ttotalSteps = %d", ach->totalSteps);
-        s3eDebugTracePrintf("\tlastUpdate = %d", ach->lastUpdate);
+        
+        LUA_EVENT_START_TABLE();
+        
+        LUA_EVENT_SET_STRING("id", ach->id);
+        LUA_EVENT_SET_STRING("name", ach->name);
+        LUA_EVENT_SET_STRING("description", ach->description);
+        
+        const char* achType;
+        if ((s3eGooglePlayAchievementType)ach->type == s3eGooglePlayAchievementType_Standard)
+            achType = "standard";
+        else
+            achType = "incremental";
+    
+        LUA_EVENT_SET_STRING("type", achType);
+        
+        const char* achStatus;
+        if ((s3eGooglePlayAchievementStatus)ach->status == s3eGooglePlayAchievementStatus_Unlocked)
+            achStatus = "unlocked";
+        else if ((s3eGooglePlayAchievementStatus)ach->status == s3eGooglePlayAchievementStatus_Revealed)
+            achStatus = "revealed";
+        else
+            achStatus = "hidden";
+        
+        LUA_EVENT_SET_STRING("status", achStatus);
+        
+        LUA_EVENT_SET_INTEGER("currentSteps", ach->currentSteps);
+        LUA_EVENT_SET_INTEGER("totalSteps", ach->totalSteps);
+        LUA_EVENT_SET_INTEGER("lastUpdate", ach->lastUpdate);
+        
+        LUA_EVENT_END_AND_INDEX_TABLE(t+1); //Lua arrays start at 1
     }
-    */
+    
+    LUA_EVENT_END_AND_NAME_TABLE("achievements");
+    
+    LUA_EVENT_SEND();
+    lua_pop(g_L, 1);
     
     return 0;
 }
@@ -69,9 +91,7 @@ int32 AchievementUnlockedCallback(void* systemData, void* userData)
 {
     LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "achievementUnlocked");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    LUA_EVENT_SET_STRING("id", (const char*)systemData); //achievement ID
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
 
@@ -82,102 +102,98 @@ int32 AchievementRevealedCallback(void* systemData, void* userData)
 {
     LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "achievementRevealed");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    LUA_EVENT_SET_STRING("id", (const char*)systemData); //achievement ID
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
 
     return 0;
 }
 
+// Used by anything that sets a set of score data. Note that as we just push
+// values to a stack this function doesn't need any context of where it's
+// called from
+void PushScoreToLuaEvent(s3eGooglePlayLeaderboardScore* sc)
+{
+    LUA_EVENT_SET_STRING("rank", sc->rank);
+    LUA_EVENT_SET_INTEGER("score", (int)sc->score);
+    LUA_EVENT_SET_STRING("displayScore", sc->displayScore);
+    LUA_EVENT_SET_STRING("name", sc->name);
+    LUA_EVENT_SET_STRING("playerID", sc->playerID);
+    LUA_EVENT_SET_INTEGER("timestamp", sc->timestamp);
+}
+
+// This returns a single score - top score for the player on leaderboard 
+// loadCurrentPlayerLeaderboardScore was called for. It doesn't tell you the
+// leaderboard (sadly) so you have to assume it was from the last call to that func...
 int32 PlayerScoreLoadedCallback(void* systemData, void* userData)
 {
 	LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "playerscoreLoaded");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    
+    PushScoreToLuaEvent((s3eGooglePlayLeaderboardScore*)systemData);
+
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
-
-    /*
-    s3eGooglePlayLeaderboardScore* sc = (s3eGooglePlayLeaderboardScore*)systemData;
-    s3eDebugTracePrintf(">>>>>>>>>>> PlayerScoreLoadedCallback");
-    AppendMessage("Player Score Loaded");
-    s3eDebugTracePrintf("\trank = %s", sc->rank);
-    s3eDebugTracePrintf("\tscore = %d", (int)sc->score);
-    s3eDebugTracePrintf("\tdisplayScore = %s", sc->displayScore);
-    s3eDebugTracePrintf("\tname = %s", sc->name);
-    s3eDebugTracePrintf("\tplayerID = %s", sc->playerID);
-    s3eDebugTracePrintf("\ttimestamp = %d", sc->timestamp);
-    */
 
     return 0;
 }
 
+void PushLeaderboardScoresToLuaEvent(s3eGooglePlayLeaderboard* lb)
+{
+    LUA_EVENT_SET_STRING("id", lb->id); //this is *leaderboard*, not player, id and name
+    LUA_EVENT_SET_STRING("name", lb->name);
+    
+    const char* scoreOrder;
+    if ((s3eGooglePlayScoreOrder)lb->scoreOrder == s3eGooglePlayScoreOrder_SmallerIsBetter)
+        scoreOrder = "smallerIsbetter";
+    else
+        scoreOrder = "largerIsBetter";
+    
+    LUA_EVENT_SET_STRING("scoreOrder", scoreOrder);
+    
+    LUA_EVENT_START_TABLE();
+    
+    for (int t = 0; t < lb->count; t++)
+    {
+        LUA_EVENT_START_TABLE();
+        
+        PushScoreToLuaEvent((s3eGooglePlayLeaderboardScore*)lb->scores + t);
+    
+        LUA_EVENT_END_AND_INDEX_TABLE(t+1); //Lua arrays start at 1
+    }
+    
+    LUA_EVENT_END_AND_NAME_TABLE("scores");
+}
+
+// This returns all players scores from the leaderboard that was specified when calling
+// loadPlayerCenteredScores. It *does* tell you the leaderboard. If you want to get top
+// player score in all leaderbaords, call loadPlayerCenteredScores for each and
+// then sort the results in this callback. This is generally more useful than
+// PlayerScoreLoadedCallback.
 int32 PlayerLeaderboardLoadedCallback(void* systemData, void* userData)
 {
 	LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "playerLeaderboardLoaded");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    
+    PushLeaderboardScoresToLuaEvent((s3eGooglePlayLeaderboard*)systemData);
+    
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
-
-    /*
-    s3eGooglePlayLeaderboard* lb = (s3eGooglePlayLeaderboard*)systemData;
-    s3eDebugTracePrintf(">>>>>>>>>>> PlayerleaderboardLoadedCallback, count = %d", lb->count);
-    AppendMessage("Player Leaderboard Loaded");
-    s3eDebugTracePrintf("\tid = %s", lb->id);
-    s3eDebugTracePrintf("\tname = %s", lb->name);
-    s3eDebugTracePrintf("\tscoreOrder = %d", lb->scoreOrder);
-    for (int t = 0; t < lb->count; t++)
-    {
-        s3eGooglePlayLeaderboardScore* sc = lb->scores + t;
-        s3eDebugTracePrintf("-----------------------------------");
-        s3eDebugTracePrintf("\trank = %s", sc->rank);
-        s3eDebugTracePrintf("\tscore = %d", (int)sc->score);
-        s3eDebugTracePrintf("\tdisplayScore = %s", sc->displayScore);
-        s3eDebugTracePrintf("\tname = %s", sc->name);
-        s3eDebugTracePrintf("\tplayerID = %s", sc->playerID);
-        s3eDebugTracePrintf("\ttimestamp = %d", sc->timestamp);
-    }
-    */
 
     return 0;
 }
 
 int32 TopScoresLeaderboardLoadedCallback(void* systemData, void* userData)
 {
+    //Identical logic to PlayerLeaderboardLoadedCallback but with different "type" name
+    
 	LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "topScoresLeaderboardLoaded");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    
+    PushLeaderboardScoresToLuaEvent((s3eGooglePlayLeaderboard*)systemData);
+    
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
-
-    /*
-    s3eGooglePlayLeaderboard* lb = (s3eGooglePlayLeaderboard*)systemData;
-    s3eDebugTracePrintf(">>>>>>>>>>> TopScoresLeaderboardLoadedCallback, count = %d", lb->count);
-    AppendMessage("Top Scores Leaderboard Loaded");
-    s3eDebugTracePrintf("\tid = %s", lb->id);
-    s3eDebugTracePrintf("\tname = %s", lb->name);
-    s3eDebugTracePrintf("\tscoreOrder = %d", lb->scoreOrder);
-    for (int t = 0; t < lb->count; t++)
-    {
-        s3eGooglePlayLeaderboardScore* sc = lb->scores + t;
-        s3eDebugTracePrintf("-----------------------------------");
-        s3eDebugTracePrintf("\trank = %s", sc->rank);
-        s3eDebugTracePrintf("\tscore = %d", (int)sc->score);
-        s3eDebugTracePrintf("\tdisplayScore = %s", sc->displayScore);
-        s3eDebugTracePrintf("\tname = %s", sc->name);
-        s3eDebugTracePrintf("\tplayerID = %s", sc->playerID);
-        s3eDebugTracePrintf("\ttimestamp = %d", sc->timestamp);
-    }
-    */
 
     return 0;
 }
@@ -186,22 +202,29 @@ int32 ScoreSubmittedCallback(void* systemData, void* userData)
 {
     LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "scoreSubmitted");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    LUA_EVENT_SET_STRING("id", (const char*)systemData); // leaderboard ID
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
 
     return 0;
 }
 
+// The "error" string is set to a string version of the relevant error code
+// from the C extension error enum (s3eGooglePlayServicesError). Example:
+// S3E_GOOGLEPLAYSERVICES_ERROR_LOAD_ACHIEVEMENTS ->
+// "error" = "S3E_GOOGLEPLAYSERVICES_ERROR_LOAD_ACHIEVEMENTS"
+// TODO: This is easy and mean you can check the C++ doc for all info,
+// but should we have something nice like just "loadAchievements"
+// And generate as part of
+// https://github.com/nickchops/MarmaladeQuickExtensionWrapper ?
 int32 ErrorCallback(void* systemData, void* userData)
 {
     LUA_EVENT_PREPARE("googlePlayServices");
     LUA_EVENT_SET_STRING("type", "error");
-    //LUA_EVENT_SET_BOOLEAN("???", ???);
-    //LUA_EVENT_SET_STRING("???", ???);
-    //LUA_EVENT_SET_INTEGER("???", ???);
+    
+    s3eGooglePlayServicesErrorInfo* error = (s3eGooglePlayServicesErrorInfo*)systemData;
+    LUA_EVENT_SET_STRING("error", error->errorString);
+    
     LUA_EVENT_SEND();
     lua_pop(g_L, 1);
 
